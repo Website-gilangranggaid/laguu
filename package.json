@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "postinstall": "node scripts/download-ytdlp.js"
+    "postinstall": "node download-ytdlp.js"
   },
   "keywords": [],
   "author": "",
