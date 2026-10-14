@@ -4,7 +4,7 @@ const https = require('https');
 
 const isWin = process.platform === 'win32';
 const filename = isWin ? 'yt-dlp.exe' : 'yt-dlp';
-const targetPath = path.join(__dirname, '..', filename);
+const targetPath = path.join(__dirname, filename);
 
 if (fs.existsSync(targetPath)) {
   console.log(`yt-dlp already exists at ${targetPath}`);
