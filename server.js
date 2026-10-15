@@ -194,39 +194,12 @@ app.get('/api/play/song', (req, res) => {
   req.on('close', () => { if (!res.writableEnded && !ytdlp.killed) ytdlp.kill(); });
 });
 
-// 3. Endpoint Download TikTok via API TikWM (Anti-Gagal & Support Video/Slide)
-app.get('/api/download/tiktok', async (req, res) => {
-  const videoUrl = req.query.url;
-  if (!videoUrl) {
-    return res.status(400).json({ error: 'URL TikTok wajib disertakan' });
-  }
 
-  try {
-    const axios = require('axios');
-    const apiRes = await axios.get(`https://www.tikwm.com/api/?url=${encodeURIComponent(videoUrl)}`);
-    const data = apiRes.data;
-
-    if (!data || data.code !== 0 || !data.data || !data.data.play) {
-      return res.status(400).json({ error: 'Gagal mengambil video TikTok. Pastikan link publik.' });
-    }
-
-    const realVideoUrl = data.data.play;
-
-    // Stream video langsung dari server ke user
-    const videoStream = await axios({
-      method: 'get',
-      url: realVideoUrl,
-      responseType: 'stream'
-    });
-
-    res.setHeader('Content-Type', 'video/mp4');
-    res.setHeader('Content-Disposition', `attachment; filename="tiktok_${Date.now()}.mp4"`);
-    
-    videoStream.data.pipe(res);
-  } catch (err) {
-    console.error('TikTok proxy error:', err.message);
-    if (!res.headersSent) {
-      res.status(500).json({ error: 'Terjadi kesalahan saat memproses video TikTok di server.' });
-    }
-  }
+ensureYtDlp().then(() => {
+  app.listen(PORT, () => {
+    console.log(`Server aktif berjalan di port ${PORT}`);
+  });
+}).catch(err => {
+  console.error('Gagal inisialisasi yt-dlp:', err);
+  process.exit(1);
 });
