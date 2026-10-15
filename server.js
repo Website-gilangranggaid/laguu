@@ -27,11 +27,9 @@ function getCookieArgs() {
 
 function ensureYtDlp() {
   return new Promise((resolve, reject) => {
+    // Hapus file lama jika ada agar selalu mengambil versi terbaru dari GitHub
     if (fs.existsSync(YTDLP_PATH)) {
-      if (process.platform !== 'win32') {
-        try { fs.chmodSync(YTDLP_PATH, 0o755); } catch (e) {}
-      }
-      return resolve();
+      try { fs.unlinkSync(YTDLP_PATH); } catch (e) {}
     }
 
     const https = require('https');
@@ -40,7 +38,7 @@ function ensureYtDlp() {
       ? 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe'
       : 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux';
 
-    console.log(`yt-dlp belum ada, mendownload untuk ${process.platform}...`);
+    console.log(`Mendownload yt-dlp versi terbaru untuk ${process.platform}...`);
 
     function doDownload(targetUrl) {
       https.get(targetUrl, (res) => {
@@ -57,7 +55,7 @@ function ensureYtDlp() {
           if (!isWin) {
             try { fs.chmodSync(YTDLP_PATH, 0o755); } catch (e) {}
           }
-          console.log('yt-dlp berhasil didownload!');
+          console.log('yt-dlp versi terbaru berhasil didownload!');
           resolve();
         });
       }).on('error', reject);
