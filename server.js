@@ -194,6 +194,62 @@ app.get('/api/play/song', (req, res) => {
   req.on('close', () => { if (!res.writableEnded && !ytdlp.killed) ytdlp.kill(); });
 });
 
+// 3. Endpoint Download TikTok (Mendukung Video & Slide Foto Otomatis)
+app.get('/api/download/tiktok', (req, res) => {
+  const videoUrl = req.query.url;
+  if (!videoUrl) {
+    return res.status(400).json({ error: 'URL TikTok wajib disertakan' });
+  }
+
+  const fileId = `tiktok-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const tmpTemplate = path.join(require('os').tmpdir(), `${fileId}.%(ext)s`);
+  
+  const args = [
+    '-f', 'best/b',
+    '--no-check-certificates',
+    '--retries', '3',
+    '--write-thumbnail',
+    '-o', tmpTemplate,
+    videoUrl
+  ];
+
+  const ytdlp = spawn(YTDLP_PATH, args);
+  let stderr = '';
+  ytdlp.stderr.on('data', data => { stderr += data.toString(); });
+  ytdlp.on('error', err => {
+    console.error('TikTok spawn error:', err);
+    if (!res.headersSent) res.status(500).json({ error: 'Gagal memproses TikTok' });
+  });
+  
+  ytdlp.on('close', code => {
+    const tmpDir = require('os').tmpdir();
+    const files = fs.readdirSync(tmpDir);
+    const downloadedFile = files.find(f => f.startsWith(fileId) && !f.endsWith('.jpg') && !f.endsWith('.webp'));
+
+    if (code !== 0 || !downloadedFile) {
+      console.error('yt-dlp TikTok error:', stderr.slice(-1000));
+      if (!res.headersSent) res.status(502).json({ error: 'Gagal mendownload konten TikTok. Pastikan link valid (video atau slide).' });
+      return;
+    }
+
+    const fullPath = path.join(tmpDir, downloadedFile);
+    const ext = path.extname(downloadedFile).toLowerCase() === '.mkv' ? 'mkv' : 'mp4';
+    const filename = `tiktok_${Date.now()}.${ext}`;
+    const contentType = ext === 'mkv' ? 'video/x-matroska' : 'video/mp4';
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Length', fs.statSync(fullPath).size);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    
+    const stream = fs.createReadStream(fullPath);
+    stream.pipe(res);
+    stream.on('close', () => { 
+      try { fs.unlinkSync(fullPath); } catch (_) {} 
+    });
+  });
+  req.on('close', () => { if (!res.writableEnded && !ytdlp.killed) ytdlp.kill(); });
+});
+
 
 ensureYtDlp().then(() => {
   app.listen(PORT, () => {
