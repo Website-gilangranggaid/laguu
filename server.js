@@ -10,14 +10,27 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const YTDLP_PATH = path.join(__dirname, process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp');
 
+// Fungsi pembantu untuk menyiapkan file cookies dari Environment Variable Railway
+function getCookieArgs() {
+  const cookiesContent = process.env.YOUTUBE_COOKIES;
+  if (!cookiesContent) return [];
+  
+  const cookiePath = path.join(require('os').tmpdir(), 'yt-cookies.txt');
+  try {
+    fs.writeFileSync(cookiePath, cookiesContent, 'utf-8');
+    return ['--cookies', cookiePath];
+  } catch (err) {
+    console.error('Gagal menulis file cookie:', err);
+    return [];
+  }
+}
+
 function ensureYtDlp() {
   return new Promise((resolve, reject) => {
     if (fs.existsSync(YTDLP_PATH)) {
       if (process.platform !== 'win32') {
         try { fs.chmodSync(YTDLP_PATH, 0o755); } catch (e) {}
       }
-      // Do not auto-update on every boot. A new yt-dlp extractor can require
-      // Deno/cookies and break the existing YouTube MP3 path unexpectedly.
       return resolve();
     }
 
@@ -106,11 +119,18 @@ app.get('/api/download/song', (req, res) => {
   const encodedName = encodeURIComponent(filename);
 
   const tmpFile = path.join(require('os').tmpdir(), `song-${Date.now()}-${Math.random().toString(16).slice(2)}.mp3`);
-  const ytdlp = spawn(YTDLP_PATH, [
+  
+  // Ambil argumen cookie dinamis
+  const cookieArgs = getCookieArgs();
+
+  const args = [
+    ...cookieArgs,
     '-f', 'ba/b', '-x', '--audio-format', 'mp3', '--audio-quality', '0',
     '--ffmpeg-location', ffmpegPath, '--no-check-certificates', '--retries', '3', '--fragment-retries', '3',
     '-o', tmpFile, videoUrl
-  ]);
+  ];
+
+  const ytdlp = spawn(YTDLP_PATH, args);
   let stderr = '';
   ytdlp.stderr.on('data', data => { stderr += data.toString(); });
   ytdlp.on('error', err => {
@@ -140,11 +160,18 @@ app.get('/api/play/song', (req, res) => {
   if (!videoUrl) return res.status(400).json({ error: 'URL lagu wajib disertakan' });
 
   const tmpFile = path.join(require('os').tmpdir(), `preview-${Date.now()}-${Math.random().toString(16).slice(2)}.mp3`);
-  const ytdlp = spawn(YTDLP_PATH, [
+  
+  // Ambil argumen cookie dinamis
+  const cookieArgs = getCookieArgs();
+
+  const args = [
+    ...cookieArgs,
     '-f', 'ba/b', '-x', '--audio-format', 'mp3', '--audio-quality', '5',
     '--ffmpeg-location', ffmpegPath, '--no-check-certificates', '--retries', '3', '--fragment-retries', '3',
     '-o', tmpFile, videoUrl
-  ]);
+  ];
+
+  const ytdlp = spawn(YTDLP_PATH, args);
   let stderr = '';
   ytdlp.stderr.on('data', data => { stderr += data.toString(); });
   ytdlp.on('error', err => {
