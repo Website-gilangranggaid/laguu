@@ -27,7 +27,6 @@ function getCookieArgs() {
 
 function ensureYtDlp() {
   return new Promise((resolve, reject) => {
-    // Hapus file lama jika ada agar selalu mengambil versi terbaru dari GitHub
     if (fs.existsSync(YTDLP_PATH)) {
       try { fs.unlinkSync(YTDLP_PATH); } catch (e) {}
     }
@@ -118,11 +117,12 @@ app.get('/api/download/song', (req, res) => {
 
   const tmpFile = path.join(require('os').tmpdir(), `song-${Date.now()}-${Math.random().toString(16).slice(2)}.mp3`);
   
-  // Ambil argumen cookie dinamis
   const cookieArgs = getCookieArgs();
 
+  // Tambahkan --js-runtime node agar yt-dlp bisa memecahkan tantangan JavaScript YouTube
   const args = [
     ...cookieArgs,
+    '--js-runtime', 'node',
     '-f', 'ba/b', '-x', '--audio-format', 'mp3', '--audio-quality', '0',
     '--ffmpeg-location', ffmpegPath, '--no-check-certificates', '--retries', '3', '--fragment-retries', '3',
     '-o', tmpFile, videoUrl
@@ -159,11 +159,12 @@ app.get('/api/play/song', (req, res) => {
 
   const tmpFile = path.join(require('os').tmpdir(), `preview-${Date.now()}-${Math.random().toString(16).slice(2)}.mp3`);
   
-  // Ambil argumen cookie dinamis
   const cookieArgs = getCookieArgs();
 
+  // Tambahkan --js-runtime node di sini juga
   const args = [
     ...cookieArgs,
+    '--js-runtime', 'node',
     '-f', 'ba/b', '-x', '--audio-format', 'mp3', '--audio-quality', '5',
     '--ffmpeg-location', ffmpegPath, '--no-check-certificates', '--retries', '3', '--fragment-retries', '3',
     '-o', tmpFile, videoUrl
